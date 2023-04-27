@@ -126,7 +126,7 @@ let prizes = [{
         title: "Mac Pro",
         img: "../img/mbp.jpg"
     }
-    ...
+    
 ];
 ```
 

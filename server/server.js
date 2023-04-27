@@ -4,6 +4,7 @@ const bodyParser = require("body-parser");
 const path = require("path");
 const chokidar = require("chokidar");
 const cfg = require("./config");
+const userService = require('./service/userService')
 
 const {
   loadXML,
@@ -85,6 +86,28 @@ router.post("/reset", (req, res, next) => {
       type: "success"
     });
   });
+});
+
+router.get('/userList', async (req, res) => {
+  let userList = await userService.getUserListService();
+  res.json({'list': userList});
+  log('查询所有用户信息');
+});
+
+router.get('/delUser', async (req, res) => {
+  let user = await userService.delUserService(req.query.id);
+  res.json({'user': user});
+  log('删除用户');
+});
+
+router.get('/restoreUser', async (req, res) => {
+  let user = await userService.restore(req.query.id);
+  res.json({'user': user});
+  log('恢复用户');
+});
+
+router.post('/addUser', async (req, res) => {
+  
 });
 
 // 获取所有用户
