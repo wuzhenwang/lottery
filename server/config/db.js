@@ -6,10 +6,10 @@ const db = new Sequelize('nxb_yuhengyaoye_3.2', 'root', '1qaz!QAZ', {
     pool: {
         max: 15,
         min: 0,
+        // 超时时间
+        acquire: 30000,
+        // 空闲时间
         idle: 10000
-    },
-    dialectOptions: {
-        chartset: 'utf8mb4'
     },
     define: {
         freezeTableName: true,   //自定义表面，不设置会自动将表名转为复数形式

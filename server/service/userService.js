@@ -12,6 +12,10 @@ const userService = {
     restore: async (id) => {
         let result = await userDao.restore(id);
         return result;
+    },
+    create: async (user) => {
+        let result = await userDao.create(user);
+        return result;
     }
 }
 

@@ -8,7 +8,8 @@
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "dev": "supervisor index.js"
+        "hotdev": "supervisor index.js",
+        "debug": "node --inspect index.js"
     },
     "author": "moshang",
     "repository": {

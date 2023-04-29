@@ -28,6 +28,19 @@ const userDao = {
         });
         return result;
     },
+    create: async (user) => {
+        let result = UserModel.create(user);
+            // .then(data => {
+            //     res.send(data);
+            //   })
+            // .catch(err => {
+            //     res.status(500).send({
+            //         message:
+            //             err.message || "创建清单是发生错误。"
+            //     });
+            // });
+        return result;
+    }
 
 }
 

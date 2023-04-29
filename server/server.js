@@ -3,8 +3,10 @@ const opn = require("opn");
 const bodyParser = require("body-parser");
 const path = require("path");
 const chokidar = require("chokidar");
-const cfg = require("./config");
-const userService = require('./service/userService')
+// const cfg = require("./config");
+const userService = require('./service/userService');
+const prizePlanDao = require("./dao/prizePlanDao")
+const prizeDao = require("./dao/prizeDao")
 
 const {
   loadXML,
@@ -23,7 +25,8 @@ let app = express(),
   curData = {},
   luckyData = {},
   errorData = [],
-  defaultType = cfg.prizes[0]["type"],
+  cfgData = {},
+  defaultType = 0,
   defaultPage = `default data`;
 
 //这里指定参数使用 json 格式
@@ -66,10 +69,15 @@ app.post("*", (req, res, next) => {
 });
 
 // 获取之前设置的数据
-router.post("/getTempData", (req, res, next) => {
-  getLeftUsers();
+router.post("/getTempData", async (req, res, next) => {
+  if (!curData.leftUsers || !luckyData) {
+    await loadData();
+    log('getTempData,loadData');
+  }
+  await getLeftUsers();
+  await getPrize();
   res.json({
-    cfgData: cfg,
+    cfgData: cfgData,
     leftUsers: curData.leftUsers,
     luckyData: luckyData
   });
@@ -107,11 +115,26 @@ router.get('/restoreUser', async (req, res) => {
 });
 
 router.post('/addUser', async (req, res) => {
-  
+  debugger
+  // 创建一条清单
+  const user = {
+    id: req.body.id,
+    userName: req.body.userName,
+    sex: req.body.sex,
+    age: req.body.age,
+    city: req.body.city,
+    job: req.body.job
+  };
+  let result = await userService.create(user);
+  res.json(result);
 });
 
 // 获取所有用户
-router.post("/getUsers", (req, res, next) => {
+router.post("/getUsers", async (req, res, next) => {
+  if (!curData.users || curData.users.length <= 0) {
+    await loadData();
+    log('getUsers,loadData');
+  }
   res.json(curData.users);
   log(`成功返回抽奖用户数据`);
 });
@@ -162,10 +185,10 @@ router.post("/errorData", (req, res, next) => {
 router.post("/export", (req, res, next) => {
   let type = [1, 2, 3, 4, 5, defaultType],
     outData = [["工号", "姓名", "部门"]];
-  cfg.prizes.forEach(item => {
-    outData.push([item.text]);
-    outData = outData.concat(luckyData[item.type] || []);
-  });
+    cfgData.prizes.forEach(item => {
+      outData.push([item.text]);
+      outData = outData.concat(luckyData[item.type] || []);
+    });
 
   writeXML(outData, "/抽奖结果.xlsx")
     .then(dt => {
@@ -226,7 +249,7 @@ function setErrorData(data) {
 
 app.use(router);
 
-function loadData() {
+/*function loadData() {
   console.log("加载EXCEL数据文件");
   let cfgData = {};
 
@@ -244,9 +267,27 @@ function loadData() {
     .catch(data => {
       curData.leftUsers = Object.assign([], curData.users);
     });
+}*/
+
+async function loadData() {
+  console.log("async 加载EXCEL数据文件");
+  let prizePlan = await prizePlanDao.findAll(1);
+  curData.users = loadXML(path.join(dataBath, prizePlan[0].userFilePath));
+  // 重新洗牌
+  await shuffle(curData.users);
+
+  // 读取已经抽取的结果
+  await loadTempData()
+      .then(data => {
+        luckyData = data[0];
+        errorData = data[1];
+      })
+      .catch(data => {
+        curData.leftUsers = Object.assign([], curData.users);
+      });
 }
 
-function getLeftUsers() {
+async function getLeftUsers() {
   //  记录当前已抽取的用户
   let lotteredUser = {};
   for (let key in luckyData) {
@@ -267,7 +308,17 @@ function getLeftUsers() {
   curData.leftUsers = leftUsers;
 }
 
-loadData();
+async function getPrize() {
+  let prizePlan = await prizePlanDao.findAll(1);
+  // log('查询到数据prizePlan：'+ JSON.stringify(prizePlan));
+  cfgData.COMPANY = prizePlan[0].mark;
+  let prizes = await prizeDao.findAll(prizePlan[0].id);
+  // log('查询到数据prize：'+ JSON.stringify(prizes));
+  cfgData.prizes = prizes;
+  // log('查询到数据：'+ JSON.stringify(cfgData));
+  cfgData.EACH_COUNT = prizes.map(x => {return x.eachCount})
+}
+// loadData();
 
 module.exports = {
   run: function(devPort, noOpen) {
