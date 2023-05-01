@@ -1,4 +1,5 @@
 const express = require("express");
+const fs = require("fs");
 const opn = require("opn");
 const bodyParser = require("body-parser");
 const path = require("path");
@@ -7,6 +8,8 @@ const chokidar = require("chokidar");
 const userService = require('./service/userService');
 const prizePlanDao = require("./dao/prizePlanDao")
 const prizeDao = require("./dao/prizeDao")
+const upload = require('./config/upload.js');
+const prizeRouter = require('./router/prize')
 
 const {
   loadXML,
@@ -47,11 +50,23 @@ if (process.argv.length > 2) {
 }
 
 app.use(express.static(cwd));
+app.use(prizeRouter)
+
+// 公开静态文件夹，匹配`虚拟路径img` 到 `真实路径public` 注意这里  /img/ 前后必须都要有斜杠！！！
+app.use('/img/', express.static('../product/dist/img/'))
+// app.use('/data/', express.static('./data/'))
 
 //请求地址为空，默认重定向到index.html文件
 app.get("/", (req, res) => {
   res.redirect(301, "index.html");
 });
+app.get("/prizePlan.html", (req, res) => {
+  res.redirect(301, "prizePlan.html");
+});
+// app.get("/index.html", (req, res) => {
+//   res.redirect(301, "index.html");
+// });
+// app.use('/prize', prizeRouter);
 
 //设置跨域访问
 app.all("*", function(req, res, next) {
@@ -87,6 +102,7 @@ router.post("/getTempData", async (req, res, next) => {
 router.post("/reset", (req, res, next) => {
   luckyData = {};
   errorData = [];
+  loadData();
   log(`重置数据成功`);
   saveErrorDataFile(errorData);
   return saveDataFile(luckyData).then(data => {
@@ -207,6 +223,63 @@ router.post("/export", (req, res, next) => {
       log(`导出数据失败！`);
     });
 });
+
+// 上传图片接口
+router.post('/uploadImage', (req, res) => {
+  upload(req, res)
+      .then(imgSrc => {
+        if (req.query.id) {
+          // 上传成功 存储文件路径 到数据库中
+          prizeDao.update(req.query.id, imgSrc)
+              .then(
+                  res.send({
+                    "id": id,
+                    "code": "ok",
+                    "message": "上传成功",
+                    'data': {
+                      url: imgSrc
+                    }
+                  })
+              )
+              .catch(err => {
+                formatErrorMessage(res, err.error)
+              });
+        } else {
+          res.send({
+            "code": "ok",
+            "message": "上传成功",
+            'data': {
+              url: imgSrc
+            }
+          })
+        }
+
+      }).catch(err =>{
+        res.status(500).send({message: err.message || "发生错误。"});
+  });
+})
+
+app.use('/download', (req, res) => {
+  let fileName = req.query.file;
+  if (!fileName) {
+    res.status(500).send({message:'文件不允许为空'})
+  } else {
+    res.set({
+      "Content-Type":"application/octet-stream", //告诉浏览器这是一个二进制文件
+      "Content-Disposition":"attachment; filename="+ fileName//告诉浏览器这是一个需要下载的文件
+    });
+    fs.createReadStream('./data/' + fileName).pipe(res);
+  }
+});
+
+
+// 格式化错误信息
+function formatErrorMessage(res, message) {
+  res.status(500).send({
+    "code": "error",
+    "message": message || '',
+  });
+}
 
 //对于匹配不到的路径或者请求，返回默认页面
 //区分不同的请求返回不同的页面内容

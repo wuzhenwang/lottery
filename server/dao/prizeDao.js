@@ -2,7 +2,7 @@ const Prize = require('../model/prizeModel')
 
 const prizeDao = {
     findAll: async (id) => {
-        let list = await Prize.findAll({where: {plan_id:id}});
+        let list = await Prize.findAll({where: {plan_id:id},order:['type']});
         return list;
     },
     delete: async (id) => {
@@ -32,6 +32,15 @@ const prizeDao = {
             //             err.message || "创建清单是发生错误。"
             //     });
             // });
+        return result;
+    },
+    update: async (id, imgSrc) => {
+        let result = Prize.update(
+            {img: imgSrc},
+            {where: {
+                id: id
+                }}
+        );
         return result;
     }
 

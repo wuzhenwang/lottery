@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>抽奖方案</title>
+    <!-- 导入 bootstrap 的样式表 -->
+    <!-- https://v4.bootcss.com/docs/components/forms/#switches -->
+    <link rel="stylesheet" href="./lib/bootstrap.css" />
+    <style>
+      :root {
+        font-size: 13px;
+      }
+      body {
+        padding: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="./lib/ajax.js"></script>
+<!--    <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.js"></script>-->
+    <script src="./lib/axios.min.js"></script>
+    <div id="app">
+      <!-- 卡片区域 -->
+      <div class="card">
+        <h5 class="card-header">添加方案</h5>
+        <div class="card-body">
+          <!-- 添加方案的表单 -->
+          <form class="form-inline" @submit.prevent>
+            <div class="input-group mb-2 mr-sm-2">
+              <div class="input-group-prepend">
+                <div class="input-group-text">名称</div>
+              </div>
+              <!-- 文本输入框 -->
+              <input type="text" class="form-control" placeholder="例：方案一" v-model="name" @keyup.enter="addPrizePlan" />
+              <div class="input-group-prepend">
+                <div class="input-group-text">标识</div>
+              </div>
+              <!-- 文本输入框 -->
+              <input type="text" class="form-control" placeholder="例：高二3班" v-model="mark" @keyup.enter="addPrizePlan" />
+
+<!--              <input type="file" id="file">-->
+<!--              <button onclick="doUpload()">开始上传</button>-->
+<!--              <img src="" alt="">-->
+
+              <div class="upload">
+                <input type="file" id="excel" single @change="upload" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+              </div>
+            </div>
+
+            <!-- 提交表单的按钮 -->
+            <button type="submit" class="btn btn-primary mb-2" @click="addPrizePlan">添加方案</button>
+          </form>
+
+        </div>
+      </div>
+      <!-- 方案列表 -->
+      <table class="table table-bordered table-striped mt-2">
+        <thead>
+          <tr>
+            <th>勾选框</th>
+            <th>id</th>
+            <th>名称</th>
+            <th>标识</th>
+            <th>状态</th>
+            <th>抽奖人员Excel文件路径</th>
+            <th>创建时间</th>
+            <th>更新时间</th>
+          </tr>
+        </thead>
+        <!-- 表格的主体区域 -->
+        <tbody>
+          <!-- TODO：循环渲染表格的每一行数据 -->
+          <tr v-for="(item,i) in prizePlans" :key="item.id">
+            <td><input type="checkbox" @click="selectPlan(item.id)"/></td>
+            <td>{{ item.id }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.mark }}</td>
+            <td>{{ item.state }}</td>
+            <td>
+                <div>
+                    {{ item.userFilePath }}
+                    <button style="float: right" class="btn btn-primary mb-2" @click="download(item.userFilePath)">下载</button>
+                </div>
+            </td>
+            <td>{{ item.created_at }}</td>
+            <td>{{ item.updated_at }}</td>
+            <td>
+              <div class="custom-control custom-switch">
+                <input type="checkbox" class="custom-control-input" :id="item.id" v-model="item.state" @click="changePlanState(item.id, item.state)">
+                <label class="custom-control-label" :for="item.id" v-if="item.state">已启用</label>
+                <label class="custom-control-label" :for="item.id" v-else>已禁用</label>
+              </div>
+            </td>
+<!--            <td>{{ item.Datetime | datafamat }}</td>-->
+            <td>
+              <a href="#" @click="planDelete(item.id,i)">删除</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 卡片区域 -->
+      <div class="card">
+        <h5 class="card-header">添加奖项</h5>
+        <div class="card-body">
+          <!-- 添加奖品的表单 -->
+          <form class="form-inline" @submit.prevent>
+            <div class="input-group mb-2 mr-sm-2">
+              <div class="input-group-prepend">
+                <div class="input-group-text">名称</div>
+              </div>
+              <input type="text" class="form-control" placeholder="例：钢笔" v-model="prize.title" @keyup.enter="addPrize" />
+
+              <div class="input-group-prepend">
+                <div class="input-group-text">奖项类别</div>
+              </div>
+              <Select placeholder="请选择" class="form-control" v-model="prize.type" ref="newText" @change="selectType">
+                <Option v-for="(item,index) in typeData" :key="item.title" :value="item.type">{{item.title}}</Option>
+              </Select>
+
+              <div class="input-group-prepend">
+                <div class="input-group-text">数量</div>
+              </div>
+              <input type="number" class="form-control" placeholder="" v-model="prize.count" @keyup.enter="addPrize" />
+
+              <div class="input-group-prepend">
+                <div class="input-group-text">每次抽取数量</div>
+              </div>
+              <input type="number" class="form-control" placeholder="" v-model="prize.eachCount" @keyup.enter="addPrize" />
+
+              <div class="upload">
+                <input type="file" id="img" single @change="upload" accept="image/*">
+              </div>
+            </div>
+
+            <!-- 提交表单的按钮 -->
+            <button type="submit" class="btn btn-primary mb-2" @click="addPrize">添加奖项</button>
+          </form>
+
+        </div>
+      </div>
+      <!-- 奖品列表 -->
+      <table class="table table-bordered table-striped mt-2">
+        <thead>
+        <tr>
+<!--          <th>奖品id</th>-->
+          <th>方案id</th>
+          <th>名称</th>
+          <th>类型</th>
+          <th>奖别</th>
+          <th>数量</th>
+          <th>每次抽取数量</th>
+<!--          <th>奖品图片</th>-->
+          <th>创建时间</th>
+          <th>更新时间</th>
+        </tr>
+        </thead>
+        <!-- 表格的主体区域 -->
+        <tbody>
+        <tr v-for="(item,i) in prizes" :key="item.id">
+<!--          <td>{{ item.id }}</td>-->
+          <td>{{ item.planId }}</td>
+          <td>{{ item.title }}</td>
+          <td>{{ item.type }}</td>
+          <td>{{ item.text }}</td>
+          <td>{{ item.count }}</td>
+          <td>{{ item.eachCount }}</td>
+<!--          <td>{{ item.img }}</td>-->
+          <td>{{ item.created_at }}</td>
+          <td>{{ item.updated_at }}</td>
+          <!--            <td>{{ item.Datetime | datafamat }}</td>-->
+          <td>
+            <div>
+              <img :src="item.img" width="50" height="50">
+            </div>
+          </td>
+          <td>
+            <a href="#" @click="prizeDelete(item,i)">删除</a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <div>
+        <div style="float: right">
+          <a href="/" class="btn btn-primary mb-2" >返回抽奖页</a>
+        </div>
+      </div>
+    </div>
+
+    <script src="./lib/vue-2.6.12.js"></script>
+    <script>
+
+      function doUpload() {
+        let file = $('#file').get(0).files[0];
+        //创建空的formData对象
+        var formdata = new FormData();
+        //  formdata.append的属性名 要和后端保持一致 `file`
+        formdata.append('file', file, file.name);
+        console.log(formdata.get('file'))
+        $.ajax({
+          url: '/uploadImage',
+          type: 'POST',
+          data: formdata,
+          processData:false,
+          contentType: false,
+          success: function (data) {
+            console.log(data)
+            // $('img').attr('src', data.data.url);
+          }
+        })
+      };
+      const Vm = new Vue({
+        el:'#app',
+        data:{
+          name: '',
+          mark: '',
+          userFilePath: '',
+          prizePlans:[{}],
+          prizes:[],
+          planId: '',
+          prize: {},
+          typeData: [
+            {'type': 1,'title': '特等奖'},
+            {'type': 2,'title': '一等奖'},
+            {'type': 3,'title': '二等奖'},
+            {'type': 4,'title': '三等奖'},
+            {'type': 5,'title': '四等奖'},
+            {'type': 6,'title': '五等奖'},
+            {'type': 7,'title': '六等奖'}
+          ]
+        },
+        created(){
+          this.getPrizePlan();
+        },
+        methods: {
+          getPrizePlan() {
+            let that = this;
+            window.AJAX({
+              url: "/prize/getPlan",
+              type: "GET",
+              success(res) {
+                that.prizePlans = res.prizePlan
+              }
+            });
+          },
+          planDelete(id,i) {
+            if(id == 1 || id == 2) return alert('竟然要删掉人家，心痛💔💔💔')
+            let that = this;
+            window.AJAX({
+              url: "/prize/deletePlan?id="+id,
+              type: "GET",
+              success(res) {
+                that.prizePlans.splice(i,1)
+              }
+            });
+
+          },
+          addPrizePlan() {
+            if(!this.name) return alert('名称不能为空')
+            if(!this.mark) return alert('标识不能为空')
+            if(!this.userFilePath) return alert('人员文件不能为空')
+            let that = this;
+            let plan_id;
+            window.AJAX({
+              url: "/prize/createPlan",
+              data: {
+                name: that.name,
+                mark: that.mark,
+                userFilePath: that.userFilePath
+              },
+              success(res) {
+                alert('添加成功');
+                that.prizePlans.push(res)
+                plan_id = res.id
+                // location.reload();
+                window.AJAX({
+                  url: "/prize/create",
+                  data: {
+                    planId: plan_id,
+                    type: 0,
+                    text:'特别奖',
+                    title: '',
+                    count: '200',
+                    eachCount: '1'
+                  },
+                  success(res) {
+                    console.log('初始0奖品成功')
+                    location.reload();
+                  }
+                });
+              }
+            });
+          },
+          upload(e) {
+            let file = e.target.files[0];
+            console.log(file)//这个就是选中文件信息
+            let formdata = new FormData();
+            formdata.append('file', file, file.name);
+            let that = this;
+            // 发送 POST 请求
+            axios({
+              method: 'post',
+              url: '/uploadImage',
+              data: formdata,
+              Headers: {
+                "content-type": "multipart/form-data",
+              }
+            }).then(function (res){
+              console.log(res.data.data);
+              if (file.type.indexOf('image') > -1) {
+                that.prize.img = res.data.data.url;
+              } else {
+                that.userFilePath = res.data.data.url;
+              }
+            }).catch(function (err){
+              console.log('错误')
+            });
+          },
+          changePlanState(id, state) {
+            console.log(id+""+state)
+            let that = this;
+            window.AJAX({
+              url: "/prize/changePlanState",
+              data: {
+                id: id,
+                state: !state
+              },
+              success(res) {
+                console.log(res)
+                alert('恭喜您状态改成功了');
+                // location.reload();
+                window.AJAX({
+                  url: "/reset",
+                  success(res) {
+                    console.log('修改状态后，数据重置')
+                  }
+                });
+              }
+            });
+          },
+          prizeDelete(item,i) {
+            if (item.type == 0 || item.planId == 1 || item.planId == 2) {
+              return alert('为什么要删掉人家？好狠的心❤️')
+            }
+            let that = this;
+            window.AJAX({
+              url: "/prize/delete?id="+item.id,
+              type: "GET",
+              success(res) {
+                that.prizes.splice(i,1)
+              }
+            });
+          },
+          selectPlan(id) {
+            this.planId = id;
+            console.log('打印选中的id：'+id)
+            let that = this;
+            window.AJAX({
+              url: "/prize/get?planId="+id,
+              type: "GET",
+              success(res) {
+                that.prizes = res.prize
+              }
+            });
+          },
+          addPrize() {
+            if (!this.planId) return alert('不选方案的话，那究竟给哪个哟🧐🧐🧐❓❓❓')
+            this.prize.planId = this.planId
+            if (!this.prize.type) return alert('好歹选个类别嘛，🤣🤣🤣')
+            if (!this.prize.count) return alert('没有数量难道抽空气嘛，🤤🤤🤤')
+            if (!this.prize.title) return alert('无名氏嘛🧐🧐🧐❓❓❓')
+            if (!this.prize.img) return alert('不给个图片嘛？🤪🤪🤪')
+            console.log(this.prize)
+            let that = this;
+            window.AJAX({
+              url: "/prize/create",
+              data: that.prize,
+              success(res) {
+                that.prizes.push(res)
+                that.prize = {}
+              }
+            });
+          },
+          selectType() {
+            //得到选中value
+            console.log(this.$refs.newText.value)
+            this.typeData.forEach(item =>{
+              if (item.type == this.prize.type) {
+                this.prize.text = item.title;
+              }
+            })
+            console.log(JSON.stringify(this.prize))
+          },
+          download(path) {
+              if(!path) return alert('你真的确定有可供下载的文件？⁉️♌️♌️')
+              let index = path.lastIndexOf("\/");
+              let fileName = path.substring(index + 1,path.length);
+              axios.get('/download?file='+fileName, {
+                  responseType: 'blob',
+              }).then(res => {
+                  const blob = new Blob([res.data]);//处理文档流
+                  const elink = document.createElement('a');
+                  elink.download = fileName;
+                  elink.style.display = 'none';
+                  elink.href = URL.createObjectURL(blob);
+                  document.body.appendChild(elink);
+                  elink.click();
+                  URL.revokeObjectURL(elink.href); // 释放URL 对象
+                  document.body.removeChild(elink);
+              })
+          },
+
+
+
+
+        }
+      })
+    </script>
+  </body>
+</html>

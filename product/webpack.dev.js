@@ -10,10 +10,11 @@ module.exports = merge(baseConfig, {
     port: 9000,
     open: true,
     proxy: {
-      "*": "http://localhost:18888"
+      // "*": "http://localhost:18888"
+      "*": "http://localhost:8090"
     },
-    before() {
-      serve.run(18888, "n");
-    }
+    // before() {
+    //   serve.run(18888, "n");
+    // }
   }
 });

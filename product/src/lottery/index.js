@@ -296,6 +296,10 @@ function bindEvent() {
           addQipao(`数据已保存到EXCEL中。`);
         });
         break;
+        // 配置抽奖方案
+      case "config":
+        window.location.href =  "prizePlan.html";
+        break;
     }
   });
 

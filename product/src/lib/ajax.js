@@ -1,6 +1,6 @@
 window.AJAX = function (opt) {
     opt = Object.assign({}, {
-        type: 'POST',
+        type: opt.type?opt.type:'POST',
         async: true,
         isJson: true
     }, opt || {});
@@ -31,6 +31,6 @@ window.AJAX = function (opt) {
         // }
     }
     xhr.open(opt.type, opt.url, opt.async);
-    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Content-Type', opt.contentType?opt.contentType:'application/json');
     xhr.send(data);
 }
