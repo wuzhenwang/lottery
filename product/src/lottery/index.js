@@ -792,7 +792,7 @@ function exportData() {
     url: "/export",
     success(data) {
       if (data.type === "success") {
-        location.href = data.url;
+        location.href ="api/"+ data.url;
       }
     }
   });

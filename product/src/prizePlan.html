@@ -301,7 +301,7 @@
             // 发送 POST 请求
             axios({
               method: 'post',
-              url: '/uploadImage',
+              url: '/api/uploadImage',
               data: formdata,
               Headers: {
                 "content-type": "multipart/form-data",
@@ -396,7 +396,7 @@
               if(!path) return alert('你真的确定有可供下载的文件？⁉️♌️♌️')
               let index = path.lastIndexOf("\/");
               let fileName = path.substring(index + 1,path.length);
-              axios.get('/download?file='+fileName, {
+              axios.get('/api/download?file='+fileName, {
                   responseType: 'blob',
               }).then(res => {
                   const blob = new Blob([res.data]);//处理文档流

@@ -30,7 +30,7 @@ window.AJAX = function (opt) {
         //     console.error('Caught Exception: ' + e);
         // }
     }
-    xhr.open(opt.type, opt.url, opt.async);
+    xhr.open(opt.type, '/api'+opt.url, opt.async);
     xhr.setRequestHeader('Content-Type', opt.contentType?opt.contentType:'application/json');
     xhr.send(data);
 }
